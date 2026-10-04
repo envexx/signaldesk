@@ -14,6 +14,7 @@ import {
   describeProviders,
   getProviderRegistry,
 } from "@/lib/server/providers";
+import { getResolvedEmailConfig } from "@/lib/server/services/settings-service";
 import { countLeads } from "@/lib/server/services/lead-service";
 
 export const runtime = "nodejs";
@@ -24,6 +25,20 @@ export async function GET(request: Request): Promise<Response> {
     try {
       const registry = getProviderRegistry();
       const health = assessProviderHealth();
+      const email = await getResolvedEmailConfig();
+
+      const providers = describeProviders(registry).map((provider) =>
+        provider.name.includes("email-delivery")
+          ? {
+              name: email.enabled
+                ? "resend-email-delivery"
+                : "demo-email-delivery",
+              mode: email.enabled ? ("production" as const) : ("demo" as const),
+              enabled: email.enabled,
+              credentialsPresent: Boolean(email.apiKey),
+            }
+          : provider,
+      );
 
       const data: HealthData = {
         status: health.status,
@@ -31,7 +46,7 @@ export async function GET(request: Request): Promise<Response> {
         timestamp: isoNow(),
         uptimeMs: Math.round(process.uptime() * 1000),
         leadCount: await countLeads(),
-        providers: describeProviders(registry),
+        providers,
         infrastructure: {
           database: isDatabaseConfigured(),
           redis: isRedisConfigured(),
