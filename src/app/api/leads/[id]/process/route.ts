@@ -16,6 +16,8 @@ import { processLead, markLeadProcessing } from "@/lib/server/services/enrichmen
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Allow the synchronous fallback to finish within Vercel's function limit.
+export const maxDuration = 60;
 
 interface RouteContext {
   params: Promise<{ id: string }>;
